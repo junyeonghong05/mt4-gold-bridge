@@ -139,6 +139,14 @@ def signal():
 
         # Final signal
         if (
+    long_score == 6
+    and h1_ema20 > h1_ema50
+    and h1_rsi > 50
+    and h1_macd > h1_macd_signal
+):
+    result = "STRONG LONG"
+
+elif (
     long_score >= short_score + 2
     and long_score >= 4
     and h1_ema20 > h1_ema50
@@ -146,6 +154,14 @@ def signal():
     and h1_macd > h1_macd_signal
 ):
     result = "LONG"
+
+elif (
+    short_score == 6
+    and h1_ema20 < h1_ema50
+    and h1_rsi < 50
+    and h1_macd < h1_macd_signal
+):
+    result = "STRONG SHORT"
 
 elif (
     short_score >= long_score + 2
