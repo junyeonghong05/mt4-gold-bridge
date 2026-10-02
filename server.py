@@ -78,6 +78,8 @@ def signal():
         rsi = clean_number(d.get("rsi", 50))
         ema20 = clean_number(d.get("ema20", 0))
         ema50 = clean_number(d.get("ema50", 0))
+        h1_ema20 = clean_number(d.get("h1_ema20", 0))
+        h1_ema50 = clean_number(d.get("h1_ema50", 0))
         macd = clean_number(d.get("macd", 0))
         macd_signal = clean_number(d.get("macd_signal", 0))
         bb_upper = clean_number(d.get("bb_upper", 0))
@@ -133,12 +135,12 @@ def signal():
                 short_score += 1
 
         # Final signal
-        if long_score >= short_score + 2 and long_score >= 4:
-            result = "LONG"
-        elif short_score >= long_score + 2 and short_score >= 4:
-            result = "SHORT"
+        if long_score >= short_score + 2 and long_score >= 4 and h1_ema20 > h1_ema50:
+        result = "LONG"
+        elif short_score >= long_score + 2 and short_score >= 4 and h1_ema20 < h1_ema50:
+        result = "SHORT"
         else:
-            result = "WAIT"
+        result = "WAIT"
 
         return jsonify({
             "symbol": d.get("symbol"),
