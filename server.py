@@ -175,9 +175,30 @@ elif (
 else:
     result = "WAIT"
 
+entry = bid
+
+if result in ["SHORT", "STRONG SHORT"]:
+    sl = entry + (atr * 1.0)
+    tp1 = entry - (atr * 1.0)
+    tp2 = entry - (atr * 2.0)
+
+elif result in ["LONG", "STRONG LONG"]:
+    sl = entry - (atr * 1.0)
+    tp1 = entry + (atr * 1.0)
+    tp2 = entry + (atr * 2.0)
+
+else:
+    sl = None
+    tp1 = None
+    tp2 = None
+
         return jsonify({
             "symbol": d.get("symbol"),
             "bid": bid,
+            "entry": entry,
+            "sl": sl,
+            "tp1": tp1,
+            "tp2": tp2,
             "signal": result,
             "long_score": long_score,
             "short_score": short_score,
