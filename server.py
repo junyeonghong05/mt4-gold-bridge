@@ -69,23 +69,31 @@ def signal():
             "reason": "No MT4 data received yet"
         })
 
-      d = latest_data.get("data", {})
+    d = latest_data.get("data", {})
 
     def clean_number(value):
-        return float(str(value).replace("\\x00", "").replace("\x00", "").strip())
+        return float(
+            str(value)
+            .replace("\\x00", "")
+            .replace("\x00", "")
+            .strip()
+        )
 
     try:
         bid = clean_number(d.get("bid", 0))
         rsi = clean_number(d.get("rsi", 50))
         ema20 = clean_number(d.get("ema20", 0))
         ema50 = clean_number(d.get("ema50", 0))
+
         h1_ema20 = clean_number(d.get("h1_ema20", 0))
         h1_ema50 = clean_number(d.get("h1_ema50", 0))
         h1_rsi = clean_number(d.get("h1_rsi", 50))
         h1_macd = clean_number(d.get("h1_macd", 0))
         h1_macd_signal = clean_number(d.get("h1_macd_signal", 0))
+
         macd = clean_number(d.get("macd", 0))
         macd_signal = clean_number(d.get("macd_signal", 0))
+
         bb_upper = clean_number(d.get("bb_upper", 0))
         bb_middle = clean_number(d.get("bb_middle", 0))
         bb_lower = clean_number(d.get("bb_lower", 0))
@@ -140,58 +148,59 @@ def signal():
 
         # Final signal
         if (
-    long_score == 6
-    and h1_ema20 > h1_ema50
-    and h1_rsi > 50
-    and h1_macd > h1_macd_signal
-):
-    result = "STRONG LONG"
+            long_score == 6
+            and h1_ema20 > h1_ema50
+            and h1_rsi > 50
+            and h1_macd > h1_macd_signal
+        ):
+            result = "STRONG LONG"
 
-elif (
-    long_score >= short_score + 2
-    and long_score >= 4
-    and h1_ema20 > h1_ema50
-    and h1_rsi > 50
-    and h1_macd > h1_macd_signal
-):
-    result = "LONG"
+        elif (
+            long_score >= short_score + 2
+            and long_score >= 4
+            and h1_ema20 > h1_ema50
+            and h1_rsi > 50
+            and h1_macd > h1_macd_signal
+        ):
+            result = "LONG"
 
-elif (
-    short_score == 6
-    and h1_ema20 < h1_ema50
-    and h1_rsi < 50
-    and h1_macd < h1_macd_signal
-):
-    result = "STRONG SHORT"
+        elif (
+            short_score == 6
+            and h1_ema20 < h1_ema50
+            and h1_rsi < 50
+            and h1_macd < h1_macd_signal
+        ):
+            result = "STRONG SHORT"
 
-elif (
-    short_score >= long_score + 2
-    and short_score >= 4
-    and h1_ema20 < h1_ema50
-    and h1_rsi < 50
-    and h1_macd < h1_macd_signal
-):
-    result = "SHORT"
+        elif (
+            short_score >= long_score + 2
+            and short_score >= 4
+            and h1_ema20 < h1_ema50
+            and h1_rsi < 50
+            and h1_macd < h1_macd_signal
+        ):
+            result = "SHORT"
 
-else:
-    result = "WAIT"
+        else:
+            result = "WAIT"
 
-entry = bid
+        # Entry / SL / TP
+        entry = bid
 
-if result in ["SHORT", "STRONG SHORT"]:
-    sl = entry + (atr * 1.0)
-    tp1 = entry - (atr * 1.0)
-    tp2 = entry - (atr * 2.0)
+        if result in ["SHORT", "STRONG SHORT"]:
+            sl = entry + atr
+            tp1 = entry - atr
+            tp2 = entry - (atr * 2)
 
-elif result in ["LONG", "STRONG LONG"]:
-    sl = entry - (atr * 1.0)
-    tp1 = entry + (atr * 1.0)
-    tp2 = entry + (atr * 2.0)
+        elif result in ["LONG", "STRONG LONG"]:
+            sl = entry - atr
+            tp1 = entry + atr
+            tp2 = entry + (atr * 2)
 
-else:
-    sl = None
-    tp1 = None
-    tp2 = None
+        else:
+            sl = None
+            tp1 = None
+            tp2 = None
 
         return jsonify({
             "symbol": d.get("symbol"),
@@ -206,6 +215,11 @@ else:
             "rsi": rsi,
             "ema20": ema20,
             "ema50": ema50,
+            "h1_ema20": h1_ema20,
+            "h1_ema50": h1_ema50,
+            "h1_rsi": h1_rsi,
+            "h1_macd": h1_macd,
+            "h1_macd_signal": h1_macd_signal,
             "macd": macd,
             "macd_signal": macd_signal,
             "bb_upper": bb_upper,
