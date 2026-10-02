@@ -2,9 +2,9 @@ from flask import Flask, request, jsonify
 from datetime import datetime, timezone
 
 app = Flask(__name__)
-
 latest_data = {}
-
+signal_history = []
+last_recorded_signal = None
 
 @app.route("/", methods=["GET"])
 def home():
@@ -201,7 +201,26 @@ def signal():
             sl = None
             tp1 = None
             tp2 = None
+        global last_recorded_signal
 
+        if result != last_recorded_signal:
+            signal_history.append({
+                "time": latest_data.get("received_at"),
+                "symbol": d.get("symbol"),
+                "signal": result,
+                "entry": entry,
+                "sl": sl,
+                "tp1": tp1,
+                "tp2": tp2,
+                "long_score": long_score,
+                "short_score": short_score,
+                "atr": atr
+            })
+
+            last_recorded_signal = result
+
+            if len(signal_history) > 100:
+                signal_history.pop(0)
         return jsonify({
             "symbol": d.get("symbol"),
             "bid": bid,
@@ -235,5 +254,11 @@ def signal():
             "signal": "ERROR",
             "message": str(e)
         }), 400
+@app.route("/history", methods=["GET"])
+def history():
+    return jsonify({
+        "count": len(signal_history),
+        "history": signal_history
+    })        
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=10000)
