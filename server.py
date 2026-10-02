@@ -72,16 +72,18 @@ def signal():
     d = latest_data.get("data", {})
 
     try:
-        bid = float(d.get("bid", 0))
-        rsi = float(d.get("rsi", 50))
-        ema20 = float(d.get("ema20", 0))
-        ema50 = float(d.get("ema50", 0))
-        macd = float(d.get("macd", 0))
-        macd_signal = float(d.get("macd_signal", 0))
-        bb_upper = float(d.get("bb_upper", 0))
-        bb_middle = float(d.get("bb_middle", 0))
-        bb_lower = float(d.get("bb_lower", 0))
-        atr = float(d.get("atr", 0))
+        def clean_number(value):
+    return float(str(value).replace("\x00", "").strip())
+        bid = clean_number(d.get("bid", 0))
+        rsi = clean_number(d.get("rsi", 50))
+        ema20 = clean_number(d.get("ema20", 0))
+        ema50 = clean_number(d.get("ema50", 0))
+        macd = clean_number(d.get("macd", 0))
+        macd_signal = clean_number(d.get("macd_signal", 0))
+        bb_upper = clean_number(d.get("bb_upper", 0))
+        bb_middle = clean_number(d.get("bb_middle", 0))
+        bb_lower = clean_number(d.get("bb_lower", 0))
+        atr = clean_number(d.get("atr", 0))
 
         long_score = 0
         short_score = 0
