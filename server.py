@@ -73,7 +73,7 @@ def signal():
 
     try:
         def clean_number(value):
-    return float(str(value).replace("\\x00", "").replace("\x00", "")strip())
+        return float(str(value).replace("\\x00", "").replace("\x00", "")strip())
         bid = clean_number(d.get("bid", 0))
         rsi = clean_number(d.get("rsi", 50))
         ema20 = clean_number(d.get("ema20", 0))
