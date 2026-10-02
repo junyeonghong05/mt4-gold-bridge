@@ -2,82 +2,34 @@ from flask import Flask, request, jsonify
 from datetime import datetime, timezone
 
 app = Flask(__name__)
+
 latest_data = {}
+latest_signal = {}
 signal_history = []
 last_recorded_signal = None
 
-@app.route("/", methods=["GET"])
-def home():
-    return jsonify({
-        "status": "online",
-        "service": "MT4 Gold Bridge",
-        "version": "2.0"
-    })
+
+def clean_number(value):
+    return float(
+        str(value)
+        .replace("\\x00", "")
+        .replace("\x00", "")
+        .strip()
+    )
 
 
-@app.route("/mt4", methods=["POST"])
-def mt4():
-    global latest_data
+def calculate_signal():
+    global latest_signal
+    global last_recorded_signal
 
-    # JSON 또는 MT4 form-data 모두 허용
-    data = request.get_json(silent=True)
-
-    if data is None:
-        data = request.form.to_dict()
-
-    if not data:
-        return jsonify({
-            "status": "error",
-            "message": "No MT4 data received"
-        }), 400
-
-    latest_data = {
-        "received_at": datetime.now(timezone.utc).isoformat(),
-        "data": data
-    }
-
-    return jsonify({
-        "status": "ok",
-        "message": "MT4 data received",
-        "received_at": latest_data["received_at"]
-    })
-
-
-@app.route("/latest", methods=["GET"])
-def latest():
     if not latest_data:
-        return jsonify({
-            "status": "waiting",
-            "message": "No MT4 data received yet"
-        })
-
-    return jsonify(latest_data)
-
-
-@app.route("/health", methods=["GET"])
-def health():
-    return jsonify({
-        "status": "healthy",
-        "service": "MT4 Gold Bridge"
-    })
-
-@app.route("/signal", methods=["GET"])
-def signal():
-    if not latest_data:
-        return jsonify({
+        latest_signal = {
             "signal": "WAIT",
-            "reason": "No MT4 data received yet"
-        })
+            "reason": ["No MT4 data received yet"]
+        }
+        return latest_signal
 
     d = latest_data.get("data", {})
-
-    def clean_number(value):
-        return float(
-            str(value)
-            .replace("\\x00", "")
-            .replace("\x00", "")
-            .strip()
-        )
 
     try:
         bid = clean_number(d.get("bid", 0))
@@ -103,7 +55,7 @@ def signal():
         short_score = 0
         reasons = []
 
-        # EMA trend
+        # EMA
         if ema20 > ema50:
             long_score += 2
             reasons.append("EMA bullish")
@@ -201,27 +153,8 @@ def signal():
             sl = None
             tp1 = None
             tp2 = None
-        global last_recorded_signal
 
-        if result != last_recorded_signal:
-            signal_history.append({
-                "time": latest_data.get("received_at"),
-                "symbol": d.get("symbol"),
-                "signal": result,
-                "entry": entry,
-                "sl": sl,
-                "tp1": tp1,
-                "tp2": tp2,
-                "long_score": long_score,
-                "short_score": short_score,
-                "atr": atr
-            })
-
-            last_recorded_signal = result
-
-            if len(signal_history) > 100:
-                signal_history.pop(0)
-        return jsonify({
+        latest_signal = {
             "symbol": d.get("symbol"),
             "bid": bid,
             "entry": entry,
@@ -247,18 +180,116 @@ def signal():
             "atr": atr,
             "reason": reasons,
             "received_at": latest_data.get("received_at")
-        })
+        }
+
+        # 신호가 바뀔 때만 history 저장
+        if result != last_recorded_signal:
+            signal_history.append({
+                "time": latest_data.get("received_at"),
+                "symbol": d.get("symbol"),
+                "signal": result,
+                "entry": entry,
+                "sl": sl,
+                "tp1": tp1,
+                "tp2": tp2,
+                "long_score": long_score,
+                "short_score": short_score,
+                "atr": atr
+            })
+
+            last_recorded_signal = result
+
+            if len(signal_history) > 100:
+                signal_history.pop(0)
+
+        return latest_signal
 
     except (ValueError, TypeError) as e:
-        return jsonify({
+        latest_signal = {
             "signal": "ERROR",
-            "message": str(e)
+            "message": str(e),
+            "received_at": latest_data.get("received_at")
+        }
+        return latest_signal
+
+
+@app.route("/", methods=["GET"])
+def home():
+    return jsonify({
+        "status": "online",
+        "service": "MT4 Gold Bridge",
+        "version": "3.0"
+    })
+
+
+@app.route("/mt4", methods=["POST"])
+def mt4():
+    global latest_data
+
+    data = request.get_json(silent=True)
+
+    if data is None:
+        data = request.form.to_dict()
+
+    if not data:
+        return jsonify({
+            "status": "error",
+            "message": "No MT4 data received"
         }), 400
+
+    latest_data = {
+        "received_at": datetime.now(timezone.utc).isoformat(),
+        "data": data
+    }
+
+    # MT4 데이터가 올 때마다 자동으로 신호 계산
+    calculated = calculate_signal()
+
+    return jsonify({
+        "status": "ok",
+        "message": "MT4 data received and signal calculated",
+        "received_at": latest_data["received_at"],
+        "signal": calculated.get("signal")
+    })
+
+
+@app.route("/latest", methods=["GET"])
+def latest():
+    if not latest_data:
+        return jsonify({
+            "status": "waiting",
+            "message": "No MT4 data received yet"
+        })
+
+    return jsonify(latest_data)
+
+
+@app.route("/health", methods=["GET"])
+def health():
+    return jsonify({
+        "status": "healthy",
+        "service": "MT4 Gold Bridge"
+    })
+
+
+@app.route("/signal", methods=["GET"])
+def signal():
+    if not latest_signal:
+        return jsonify({
+            "signal": "WAIT",
+            "reason": "No signal calculated yet"
+        })
+
+    return jsonify(latest_signal)
+
+
 @app.route("/history", methods=["GET"])
 def history():
     return jsonify({
         "count": len(signal_history),
         "history": signal_history
-    })        
+    })
+
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=10000)
