@@ -61,6 +61,106 @@ def health():
         "service": "MT4 Gold Bridge"
     })
 
+@app.route("/signal", methods=["GET"])
+def signal():
+    if not latest_data:
+        return jsonify({
+            "signal": "WAIT",
+            "reason": "No MT4 data received yet"
+        })
 
+    d = latest_data.get("data", {})
+
+    try:
+        bid = float(d.get("bid", 0))
+        rsi = float(d.get("rsi", 50))
+        ema20 = float(d.get("ema20", 0))
+        ema50 = float(d.get("ema50", 0))
+        macd = float(d.get("macd", 0))
+        macd_signal = float(d.get("macd_signal", 0))
+        bb_upper = float(d.get("bb_upper", 0))
+        bb_middle = float(d.get("bb_middle", 0))
+        bb_lower = float(d.get("bb_lower", 0))
+        atr = float(d.get("atr", 0))
+
+        long_score = 0
+        short_score = 0
+        reasons = []
+
+        # EMA trend
+        if ema20 > ema50:
+            long_score += 2
+            reasons.append("EMA bullish")
+        elif ema20 < ema50:
+            short_score += 2
+            reasons.append("EMA bearish")
+
+        # MACD
+        if macd > macd_signal:
+            long_score += 2
+            reasons.append("MACD bullish")
+        elif macd < macd_signal:
+            short_score += 2
+            reasons.append("MACD bearish")
+
+        # RSI
+        if rsi < 30:
+            long_score += 2
+            reasons.append("RSI oversold")
+        elif rsi > 70:
+            short_score += 2
+            reasons.append("RSI overbought")
+        elif rsi > 55:
+            long_score += 1
+        elif rsi < 45:
+            short_score += 1
+
+        # Bollinger Bands
+        if bb_lower > 0 and bid <= bb_lower:
+            long_score += 2
+            reasons.append("Near lower Bollinger Band")
+
+        if bb_upper > 0 and bid >= bb_upper:
+            short_score += 2
+            reasons.append("Near upper Bollinger Band")
+
+        if bb_middle > 0:
+            if bid > bb_middle:
+                long_score += 1
+            elif bid < bb_middle:
+                short_score += 1
+
+        # Final signal
+        if long_score >= short_score + 2 and long_score >= 4:
+            result = "LONG"
+        elif short_score >= long_score + 2 and short_score >= 4:
+            result = "SHORT"
+        else:
+            result = "WAIT"
+
+        return jsonify({
+            "symbol": d.get("symbol"),
+            "bid": bid,
+            "signal": result,
+            "long_score": long_score,
+            "short_score": short_score,
+            "rsi": rsi,
+            "ema20": ema20,
+            "ema50": ema50,
+            "macd": macd,
+            "macd_signal": macd_signal,
+            "bb_upper": bb_upper,
+            "bb_middle": bb_middle,
+            "bb_lower": bb_lower,
+            "atr": atr,
+            "reason": reasons,
+            "received_at": latest_data.get("received_at")
+        })
+
+    except (ValueError, TypeError) as e:
+        return jsonify({
+            "signal": "ERROR",
+            "message": str(e)
+        }), 400
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=10000)
