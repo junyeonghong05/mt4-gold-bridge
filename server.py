@@ -98,44 +98,68 @@ def calculate_signal():
             elif bid < bb_middle:
                 short_score += 1
 
-        # Final signal
+          # ==================================================
+        # Reversal signal
+        # M5 단기 고점 SHORT / 단기 저점 LONG 포착
+        # ==================================================
+
+        near_upper = (
+            bb_upper > bb_middle
+            and bid >= bb_middle + (bb_upper - bb_middle) * 0.70
+        )
+
+        near_lower = (
+            bb_middle > bb_lower
+            and bid <= bb_middle - (bb_middle - bb_lower) * 0.70
+        )
+
+        bearish_momentum = (
+            macd < macd_signal
+            or rsi >= 65
+        )
+
+        bullish_momentum = (
+            macd > macd_signal
+            or rsi <= 35
+        )
+
+
+        # 강한 고점 반전 후보
         if (
-            long_score == 6
-            and h1_ema20 > h1_ema50
-            and h1_rsi > 50
-            and h1_macd > h1_macd_signal
-        ):
-            result = "STRONG LONG"
-
-        elif (
-            long_score >= short_score + 2
-            and long_score >= 4
-            and h1_ema20 > h1_ema50
-            and h1_rsi > 50
-            and h1_macd > h1_macd_signal
-        ):
-            result = "LONG"
-
-        elif (
-            short_score == 6
-            and h1_ema20 < h1_ema50
-            and h1_rsi < 50
-            and h1_macd < h1_macd_signal
+            bid >= bb_upper
+            and rsi >= 70
         ):
             result = "STRONG SHORT"
 
+
+        # 고점 반전 후보
         elif (
-            short_score >= long_score + 2
-            and short_score >= 4
-            and h1_ema20 < h1_ema50
-            and h1_rsi < 50
-            and h1_macd < h1_macd_signal
+            near_upper
+            and rsi >= 60
+            and bearish_momentum
         ):
             result = "SHORT"
 
+
+        # 강한 저점 반전 후보
+        elif (
+            bid <= bb_lower
+            and rsi <= 30
+        ):
+            result = "STRONG LONG"
+
+
+        # 저점 반전 후보
+        elif (
+            near_lower
+            and rsi <= 40
+            and bullish_momentum
+        ):
+            result = "LONG"
+
+
         else:
             result = "WAIT"
-
         # Entry / SL / TP
         entry = bid
 
