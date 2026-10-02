@@ -72,7 +72,7 @@ def signal():
     d = latest_data.get("data", {})
 
     try:
-        def clean_number(value):
+    def clean_number(value):
         return float(str(value).replace("\\x00", "").replace("\x00", "")strip())
         bid = clean_number(d.get("bid", 0))
         rsi = clean_number(d.get("rsi", 50))
