@@ -33,7 +33,9 @@ def calculate_signal():
 
     try:
         bid = clean_number(d.get("bid", 0))
-        rsi = clean_number(d.get("rsi", 50))
+        rsi = clean_number(data.get("rsi", 50))
+        rsi1 = clean_number(data.get("rsi1", 50))
+        rsi2 = clean_number(data.get("rsi2", 50))
         ema20 = clean_number(d.get("ema20", 0))
         ema50 = clean_number(d.get("ema50", 0))
 
@@ -43,8 +45,13 @@ def calculate_signal():
         h1_macd = clean_number(d.get("h1_macd", 0))
         h1_macd_signal = clean_number(d.get("h1_macd_signal", 0))
 
-        macd = clean_number(d.get("macd", 0))
-        macd_signal = clean_number(d.get("macd_signal", 0))
+        macd = clean_number(data.get("macd", 0))
+        macd1 = clean_number(data.get("macd1", 0))
+        macd2 = clean_number(data.get("macd2", 0))
+
+        macd_signal = clean_number(data.get("macd_signal", 0))
+        macd_signal1 = clean_number(data.get("macd_signal1", 0))
+        macd_signal2 = clean_number(data.get("macd_signal2", 0))
 
         bb_upper = clean_number(d.get("bb_upper", 0))
         bb_middle = clean_number(d.get("bb_middle", 0))
@@ -103,6 +110,16 @@ def calculate_signal():
         # M5 단기 고점 SHORT / 단기 저점 LONG 포착
         # ==================================================
 
+        # READY 신호용 모멘텀 변화
+        macd_gap = macd - macd_signal
+        macd_gap1 = macd1 - macd_signal1
+        macd_gap2 = macd2 - macd_signal2
+
+        rsi_turning_down = rsi < rsi1 and rsi1 >= rsi2
+        rsi_turning_up = rsi > rsi1 and rsi1 <= rsi2
+
+        macd_turning_down = macd_gap < macd_gap1
+        macd_turning_up = macd_gap > macd_gap1
         near_upper = (
             bb_upper > bb_middle
             and bid >= bb_middle + (bb_upper - bb_middle) * 0.70
@@ -157,6 +174,22 @@ def calculate_signal():
         ):
             result = "LONG"
 
+
+        # SHORT 직전 예고
+        elif (
+            near_upper
+            and rsi >= 55
+            and (rsi_turning_down or macd_turning_down)
+        ):
+            result = "SHORT READY"
+
+        # LONG 직전 예고
+        elif (
+            near_lower
+            and rsi <= 45
+            and (rsi_turning_up or macd_turning_up)
+        ):
+            result = "LONG READY"
 
         else:
             result = "WAIT"
